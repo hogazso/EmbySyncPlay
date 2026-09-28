@@ -680,6 +680,33 @@ namespace EmbySyncPlay.Core
             }
         }
 
+        /// <summary>Felhasználónév feloldása megjelenítéshez — ARCHITECTURE.md 10. pont,
+        /// felhasználó explicit kérésére (a nyers UserId GUID nem értelmezhető emberi
+        /// felhasználó számára).</summary>
+        public string ResolveDisplayName(string userId)
+        {
+            if (Guid.TryParse(userId, out var guid))
+            {
+                return _userManager.GetUserById(guid)?.Name ?? userId;
+            }
+            return userId;
+        }
+
+        /// <summary>Item cím feloldása megjelenítéshez — ugyanaz az Int64/Guid kétértelműség
+        /// vonatkozik rá, mint a ResolveInternalIds-re (lásd ott a komment).</summary>
+        public string ResolveItemName(string itemId)
+        {
+            if (long.TryParse(itemId, out var internalId))
+            {
+                return _libraryManager.GetItemById(internalId)?.Name ?? itemId;
+            }
+            if (Guid.TryParse(itemId, out var guid))
+            {
+                return _libraryManager.GetItemById(guid)?.Name ?? itemId;
+            }
+            return itemId;
+        }
+
         /// <summary>Az EntryPoint hívja szerverindításkor — eltávolítja azokat a résztvevőket,
         /// akiknek már nem él az Emby session-je.</summary>
         public void ValidateRestoredSessions(Func<string, bool> isEmbySessionAlive)

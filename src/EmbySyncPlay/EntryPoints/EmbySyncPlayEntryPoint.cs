@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using EmbySyncPlay.Core;
 using EmbySyncPlay.Models;
 using MediaBrowser.Controller.Library;
@@ -17,6 +18,7 @@ namespace EmbySyncPlay.EntryPoints
     {
         private readonly ISessionManager _sessionManager;
         private readonly ILogger _logger;
+        private Timer _cleanupTimer;
 
         public static SyncSessionManager SyncManager { get; private set; }
         public static SseBroadcaster Broadcaster { get; private set; }
@@ -53,6 +55,47 @@ namespace EmbySyncPlay.EntryPoints
             _sessionManager.PlaybackProgress += OnPlaybackProgress;
             _sessionManager.PlaybackStopped += OnPlaybackStopped;
             _sessionManager.SessionEnded += OnSessionEnded;
+
+            // ÉLŐ NAS-teszten (2026-09-28) kiderült: a SyncSessionCleanupTask (IScheduledTask,
+            // lásd EntryPoints/SyncSessionCleanupTask.cs) helyesen regisztrálódik az Emby
+            // /ScheduledTasks listájában, és kézi indításra ("ScheduledTasks/Running/{id}")
+            // hibátlanul lefut — DE a 10 mp-es IntervalTrigger-je SOHA nem tüzel el magától
+            // (a szerver 10+ perce fut, a task State mindvégig "Idle" maradt, LastExecutionResult
+            // egyáltalán nem is szerepelt a listázásban, amíg kézzel el nem indítottuk). Emiatt a
+            // drift-korrekció és az inaktív party-takarítás GYAKORLATBAN eddig soha nem futott le
+            // automatikusan. Mivel ennek az Emby-oldali trigger-hibának a pontos okát a plugin
+            // SDK-ból nem lehet kideríteni/javítani, egy saját, az Emby scheduler-től teljesen
+            // független .NET Timer-t használunk megbízható helyettesítőként — ez ugyanazt a két
+            // SyncSessionManager metódust hívja, amit a SyncSessionCleanupTask is hívna. A
+            // SyncSessionCleanupTask regisztrációját meghagyjuk (ártalmatlan, idempotens
+            // műveletek), hátha egy jövőbeli Emby-verzióban mégis working lesz a trigger.
+            _cleanupTimer = new Timer(RunPeriodicCleanup, null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+        }
+
+        private void RunPeriodicCleanup(object state)
+        {
+            try
+            {
+                var config = Plugin.Instance?.Configuration;
+                if (config == null) return;
+
+                SyncManager.RunDriftCorrectionPass(config.DriftToleranceSeconds, config.SeekCooldownSeconds);
+                SyncManager.RemoveIdleSessions(config.SessionIdleTimeoutMinutes);
+
+                // Kiegészítő, ground-truth ellenőrzés: kidobja azokat a Watching résztvevőket,
+                // akiknek az Emby session-je már nem létezik — ez GYORSABBAN takaríthat, mint a
+                // fenti idő-alapú RemoveIdleSessions (nem kell megvárni a teljes idle timeoutot),
+                // bár — élő teszten megfigyelve — ugyanazon az eszközön való újracsatlakozás
+                // esetén az Emby újrahasznosíthatja a SessionInfo.Id-t, ilyenkor ez a konkrét
+                // ellenőrzés hamis pozitívot ad (élőnek látja), és az idő-alapú takarítás marad
+                // az elsődleges védőháló.
+                SyncManager.ValidateRestoredSessions(embySessionId =>
+                    System.Linq.Enumerable.Any(_sessionManager.Sessions, s => s.Id == embySessionId));
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorException("EmbySyncPlay: periodikus party-takarítás sikertelen", ex);
+            }
         }
 
         // -----------------------------------------------------------------
@@ -179,6 +222,8 @@ namespace EmbySyncPlay.EntryPoints
 
         public void Dispose()
         {
+            _cleanupTimer?.Dispose();
+
             SyncManager.SessionChanged -= OnSessionChanged;
             SyncManager.SessionRemoved -= OnSessionRemoved;
             SyncManager.ChatMessageAdded -= OnChatMessageAdded;

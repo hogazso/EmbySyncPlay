@@ -102,8 +102,13 @@ namespace EmbySyncPlay.Api
     {
         public string Id { get; set; }
         public string HostUserId { get; set; }
+        // Ember számára olvasható mezők — a nyers UserId/ItemId önmagában nem értelmezhető
+        // (felhasználó explicit visszajelzése, 2026-09-28: "ebből semmi értelmes nem derül
+        // ki egy ember számára").
+        public string HostDisplayName { get; set; }
         public string MediaKind { get; set; }
         public string ItemId { get; set; }
+        public string ItemName { get; set; }
         public List<string> PlayQueue { get; set; }
         public string Visibility { get; set; }
         public string State { get; set; }
@@ -114,6 +119,7 @@ namespace EmbySyncPlay.Api
     public class ParticipantDto
     {
         public string UserId { get; set; }
+        public string DisplayName { get; set; }
         public string DeviceLabel { get; set; }
         public string Role { get; set; }
         public string Mode { get; set; }

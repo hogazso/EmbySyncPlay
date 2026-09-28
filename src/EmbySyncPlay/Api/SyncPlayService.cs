@@ -152,8 +152,10 @@ namespace EmbySyncPlay.Api
             {
                 Id = session.Id.ToString(),
                 HostUserId = session.HostUserId,
+                HostDisplayName = Manager.ResolveDisplayName(session.HostUserId),
                 MediaKind = session.MediaKind.ToString(),
                 ItemId = session.ItemId,
+                ItemName = Manager.ResolveItemName(session.ItemId),
                 PlayQueue = session.PlayQueue,
                 Visibility = session.Visibility.ToString(),
                 State = session.State.ToString(),
@@ -161,6 +163,7 @@ namespace EmbySyncPlay.Api
                 Participants = session.Participants.Select(p => new ParticipantDto
                 {
                     UserId = p.UserId,
+                    DisplayName = Manager.ResolveDisplayName(p.UserId),
                     DeviceLabel = ResolveDeviceLabel(p.UserId, p.DeviceId),
                     Role = p.Role.ToString(),
                     Mode = p.Mode.ToString()

@@ -21,7 +21,7 @@
   HTML elemek helyett, és data-require-rel jelzik, hogy ezeket be kell tölteni előtte.
 -->
 <div data-role="page" class="page type-interior syncplay-page" id="syncPlayPage"
-     data-controller="__plugin/syncplayjs"
+     data-controller="__plugin/syncplayjs_v3"
      data-require="emby-select,emby-input,emby-button,emby-checkbox">
   <div data-role="content">
     <div class="content-primary">
@@ -60,8 +60,20 @@
         <div id="syncplay-sessions"></div>
       </section>
 
+      <section id="syncplay-joining" style="display:none;">
+        <h2>Csatlakozás a party-hoz...</h2>
+        <p>Kérlek várj, mindjárt kezdődik a közös nézés.</p>
+      </section>
+
       <section id="syncplay-active-party" style="display:none;">
         <h2 id="syncplay-party-title"></h2>
+
+        <div>
+          <label>Meghívó link (küldd el, akinek szeretnéd — rákattintva azonnal csatlakozik és elindul nála is a lejátszás):
+            <input is="emby-input" type="text" id="syncplay-invite-link" readonly />
+          </label>
+          <button is="emby-button" type="button" id="syncplay-copy-invite-btn">Link másolása</button>
+        </div>
 
         <div id="syncplay-participants"></div>
 
