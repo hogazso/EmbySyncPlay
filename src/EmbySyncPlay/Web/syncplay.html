@@ -1,0 +1,84 @@
+<!--
+  ARCHITECTURE.md 2.8 — az IHasWebPages (EnableInMainMenu/EnableInUserMenu: true) által
+  betöltött oldal. Ez a tényleges "közös mozizás" felhasználói felület: party-lista,
+  csatlakozás, chat.
+
+  FONTOS (élő NAS-teszten, 2026-09-28, derült ki): az Emby SPA router (viewmanager.js) a
+  menübe/user-menübe rakott oldalakat "view"-ként tölti be, ami MEGKÖVETELI a
+  data-controller="__plugin/<jsPageName>" attribútumot a gyökér elemen — enélkül a router
+  "instance is undefined" hibával elszáll, mert nem talál kontrollert az oldalhoz. A
+  data-controller által hivatkozott <jsPageName> egy MÁSIK, külön regisztrált
+  PluginPageInfo-ra mutat (lásd Plugin.cs), aminek a tartalma egy AMD modul (syncplay.js),
+  NEM egy hagyományos <script src="..."> — az innerHTML-be injektált <script> tag ugyanis
+  nem futna le. Ezt a mintát a szerveren már működő plugin (Emby.Server.CinemaMode) valódi,
+  élő oldalának forrásából azonosítottuk be.
+-->
+<!--
+  A Típus/Láthatóság legördülők élő NAS-teszten (2026-09-28) nem maradtak nyitva sima
+  <select>-ként — az Emby saját globális UI-kezelése (fókusz/kattintás) valószínűleg
+  azonnal bezárta őket. A ténylegesen működő gyári oldalak (pl. SecurityCams) mindig az
+  Emby saját "emby-select"/"emby-input"/"emby-button" web-komponenseit használják sima
+  HTML elemek helyett, és data-require-rel jelzik, hogy ezeket be kell tölteni előtte.
+-->
+<div data-role="page" class="page type-interior syncplay-page" id="syncPlayPage"
+     data-controller="__plugin/syncplayjs"
+     data-require="emby-select,emby-input,emby-button,emby-checkbox">
+  <div data-role="content">
+    <div class="content-primary">
+      <h1>EmbySyncPlay — Közös nézés</h1>
+
+      <section id="syncplay-create-party">
+        <h2>Party indítása</h2>
+        <form id="syncplay-create-form">
+          <div>
+            <label>Emby ItemId (a film/epizód/szám GUID-je):
+              <input is="emby-input" type="text" id="syncplay-create-itemid" required placeholder="pl. 3f2a1b4c5d6e7f8091a2b3c4d5e6f708" />
+            </label>
+          </div>
+          <div>
+            <label>Típus:
+              <select is="emby-select" id="syncplay-create-mediakind">
+                <option value="Video">Videó (film/sorozat)</option>
+                <option value="Audio">Zene</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Láthatóság:
+              <select is="emby-select" id="syncplay-create-visibility">
+                <option value="Public">Nyilvános (kiajánlott)</option>
+                <option value="InviteOnly">Csak meghívással</option>
+              </select>
+            </label>
+          </div>
+          <button is="emby-button" type="submit" class="raised button-submit block">Party indítása</button>
+        </form>
+      </section>
+
+      <section id="syncplay-session-list">
+        <h2>Aktív party-k</h2>
+        <div id="syncplay-sessions"></div>
+      </section>
+
+      <section id="syncplay-active-party" style="display:none;">
+        <h2 id="syncplay-party-title"></h2>
+
+        <div id="syncplay-participants"></div>
+
+        <div id="syncplay-chat">
+          <div id="syncplay-chat-log"></div>
+          <form id="syncplay-chat-form">
+            <input type="text" id="syncplay-chat-input" maxlength="500" placeholder="Üzenet..." />
+            <button type="submit">Küldés</button>
+          </form>
+          <label>
+            <input type="checkbox" id="syncplay-overlay-toggle" />
+            Chat megjelenítése a videó felett is (ezen az eszközön)
+          </label>
+        </div>
+
+        <button id="syncplay-leave-btn">Kilépés a party-ból</button>
+      </section>
+    </div>
+  </div>
+</div>
