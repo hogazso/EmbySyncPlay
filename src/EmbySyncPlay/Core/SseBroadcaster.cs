@@ -23,6 +23,8 @@ namespace EmbySyncPlay.Core
         private readonly ConcurrentDictionary<string, ConcurrentQueue<string>> _subscriberQueues =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>();
 
+        private const int MaxQueuedEventsPerSubscriber = 500;
+
         public string Subscribe()
         {
             var subscriberId = Guid.NewGuid().ToString("N");
@@ -52,6 +54,8 @@ namespace EmbySyncPlay.Core
             foreach (var queue in _subscriberQueues.Values)
             {
                 queue.Enqueue(line);
+                // Lassú/elakadt kliens ne halmozzon fel korlátlanul memóriát: a legrégebbit eldobjuk.
+                while (queue.Count > MaxQueuedEventsPerSubscriber && queue.TryDequeue(out _)) { }
             }
         }
     }

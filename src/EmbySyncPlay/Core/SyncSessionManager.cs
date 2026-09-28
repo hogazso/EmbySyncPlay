@@ -193,6 +193,9 @@ namespace EmbySyncPlay.Core
             {
                 next.Role = ParticipantRole.Host;
                 session.HostUserId = next.UserId;
+                // Az új host élő pozíciójára frissítünk, hogy a drift-korrekció ne a
+                // régi host utolsó pozíciójához mérje a résztvevőket.
+                RefreshPositionFromHostLiveState(session);
             }
         }
 
@@ -607,10 +610,17 @@ namespace EmbySyncPlay.Core
         // Perzisztencia — ARCHITECTURE.md 2.2, best-effort
         // ---------------------------------------------------------------
 
+        private int _persistScheduled;
+
+        // Debounce: egy másodpercen belüli sok változás egyetlen fájlírásba olvad össze.
         private void PersistAsync()
         {
-            Task.Run(() =>
+            if (Interlocked.Exchange(ref _persistScheduled, 1) == 1) return;
+
+            Task.Run(async () =>
             {
+                await Task.Delay(1000).ConfigureAwait(false);
+                Interlocked.Exchange(ref _persistScheduled, 0);
                 lock (_persistLock)
                 {
                     try

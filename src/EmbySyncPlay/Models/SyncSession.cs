@@ -51,11 +51,11 @@ namespace EmbySyncPlay.Models
 
         public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
 
-        public List<Participant> Participants { get; set; } = new List<Participant>();
+        public ConcurrentList<Participant> Participants { get; set; } = new ConcurrentList<Participant>();
 
-        public List<ChatMessage> ChatLog { get; set; } = new List<ChatMessage>();
+        public ConcurrentList<ChatMessage> ChatLog { get; set; } = new ConcurrentList<ChatMessage>();
 
         /// <summary>Meghívásos party esetén a látni engedett felhasználók listája.</summary>
-        public List<string> InvitedUserIds { get; set; } = new List<string>();
+        public ConcurrentList<string> InvitedUserIds { get; set; } = new ConcurrentList<string>();
     }
 }
